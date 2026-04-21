@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --color-sleek-bg: #f8fafc;
+  --color-sleek-sidebar: #111827;
+  --color-sleek-primary: #cc9a4b;
+  --color-sleek-danger: #c41919;
+  --color-sleek-text-main: #1f2937;
+  --color-sleek-text-muted: #64748b;
+  --color-sleek-border: #e2e8f0;
+}
+
+@layer base {
+  body {
+    @apply bg-sleek-bg text-sleek-text-main antialiased;
+  }
+}
+
