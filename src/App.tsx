@@ -17,6 +17,13 @@ export default function App() {
   const [printingTransaction, setPrintingTransaction] = useState<Transaction | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Handle print state cleanup
+  useEffect(() => {
+    const handleAfterPrint = () => setPrintingTransaction(null);
+    window.addEventListener('afterprint', handleAfterPrint);
+    return () => window.removeEventListener('afterprint', handleAfterPrint);
+  }, []);
+
   // Load history from localStorage
   useEffect(() => {
     const savedHistory = localStorage.getItem('pos_history');
@@ -540,40 +547,53 @@ export default function App() {
       <style>{`
         @media print {
           @page {
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0;
             size: 80mm auto;
           }
           html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 80mm !important;
-            height: auto !important;
-            overflow: visible !important;
+            margin: 0;
+            padding: 0;
+            width: 80mm;
+            background: white;
           }
-          #root, nav, main, .no-print { 
-            display: none !important; 
-            height: 0 !important;
-            overflow: hidden !important;
+          body * {
+            visibility: hidden;
+            display: none;
           }
-          #receipt-print { 
-            display: block !important;
-            visibility: visible !important;
-            position: relative !important;
-            width: 72mm !important; /* Slightly narrower to avoid side cutting on Cooper 80 */
-            margin: 0 auto !important;
-            padding: 4mm 2mm !important;
-            font-family: 'Courier New', Courier, monospace !important;
-            font-size: 10pt !important;
-            line-height: 1.1 !important;
-            float: none !important;
+          #receipt-print, #receipt-print * {
+            visibility: visible;
+            display: block;
           }
-          #receipt-print * {
-            visibility: visible !important;
+          #receipt-print {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 72mm; /* Narrower to prevent cutting on Cooper 80 */
+            padding: 2mm;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11px;
+            line-height: 1.2;
+            color: black;
+            box-sizing: border-box;
+          }
+          #receipt-print .flex {
+            display: flex !important;
+          }
+          #receipt-print .justify-between {
+            justify-content: space-between !important;
+          }
+          #receipt-print .text-center {
+            text-align: center !important;
           }
           hr {
-            border-top: 1px dashed black !important;
-            margin: 2mm 0 !important;
+            border: none;
+            border-top: 1px dashed black;
+            margin: 2mm 0;
+            display: block !important;
+          }
+          .no-print {
+            display: none !important;
           }
         }
       `}</style>

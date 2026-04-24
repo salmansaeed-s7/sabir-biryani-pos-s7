@@ -12,9 +12,6 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        devOptions: {
-          enabled: true
-        },
         manifest: {
           name: 'Sabir Biryani POS',
           short_name: 'Sabir POS',
