@@ -142,79 +142,137 @@ export default function App() {
       <style>{`
         @media print {
           @page {
-            margin: 0;
+            margin: 0 !important;
             size: 80mm auto;
           }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
             width: 80mm !important;
+            height: auto !important;
+            min-height: 0 !important;
+            overflow: visible !important;
             background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Hide EVERYTHING inside root except the receipt */
+          #root {
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
           }
           #root > *:not(#receipt-print) {
             display: none !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            visibility: hidden !important;
           }
           #receipt-print {
             display: block !important;
             visibility: visible !important;
-            width: 72mm !important;
+            position: static !important;
+            width: 74mm !important;
             margin: 0 auto !important;
             padding: 4mm 2mm !important;
             font-family: 'Courier New', Courier, monospace !important;
-            font-size: 11pt !important;
-            line-height: 1.1 !important;
+            font-size: 10pt !important;
+            line-height: 1.2 !important;
             color: black !important;
             background: white !important;
+            word-wrap: break-word !important;
           }
           #receipt-print * {
             visibility: visible !important;
+            display: block !important;
+            background: transparent !important;
+            color: black !important;
           }
-          .flex { display: flex !important; }
-          .justify-between { justify-content: space-between !important; }
-          .text-center { text-align: center !important; }
-          .font-bold { font-weight: bold !important; }
-          hr {
+          #receipt-print .flex {
+            display: flex !important;
+            flex-direction: row !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+          }
+          #receipt-print .justify-between {
+             justify-content: space-between !important;
+          }
+          #receipt-print .text-center {
+            text-align: center !important;
+          }
+          #receipt-print .uppercase {
+            text-transform: uppercase !important;
+          }
+          #receipt-print .font-bold {
+            font-weight: bold !important;
+          }
+          #receipt-print hr {
             border: none !important;
             border-top: 1px dashed black !important;
             margin: 2mm 0 !important;
-            display: block !important;
+            width: 100% !important;
+            height: 0 !important;
+          }
+          /* Helper to force inline for spans/etc */
+          #receipt-print .inline {
+            display: inline !important;
+          }
+          #receipt-print .space-y-1 > * + * {
+            margin-top: 0.25rem !important;
+          }
+          .no-print {
+            display: none !important;
           }
         }
       `}</style>
 
-      {/* Simple Receipt Template for Printing (Moved to top sibling for isolation) */}
+      {/* Simple Receipt Template for Printing */}
       <div id="receipt-print" className="hidden print:block text-black bg-white">
-        <div className="text-center mb-4">
+        <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full border border-black/10">
             <img src={sabirLogo} alt="Logo" className="w-full h-full object-cover" />
           </div>
-          <p className="text-sm font-bold uppercase tracking-wider mb-1">Sabir Biryani</p>
-          <p className="text-xs">Location: Gulshan-e-Maymar</p>
-          <p className="text-xs font-bold mt-1">WhatsApp: +92 345 0880202</p>
+          <p className="text-sm font-bold uppercase mb-1">Sabir Biryani</p>
+          <p className="text-[10px]">GULSHAN-E-MAYMAR, KARACHI</p>
+          <p className="text-[10px] font-bold">WHATSAPP: 0345-0880202</p>
         </div>
-        <hr className="border-t border-black border-dashed my-2" />
-        <div className="flex justify-between text-xs mb-4">
+        
+        <hr />
+        
+        <div className="flex text-[10px]">
            <span>Order: #{(printingTransaction || lastTransaction)?.id || 'TEST'}</span>
            <span>{new Date((printingTransaction || lastTransaction)?.timestamp || Date.now()).toLocaleDateString()}</span>
         </div>
-        <div className="space-y-1 mb-4">
+        <div className="flex text-[10px] mb-2">
+           <span>Time: {new Date((printingTransaction || lastTransaction)?.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        
+        <hr />
+        
+        <div className="space-y-1">
           {((printingTransaction || lastTransaction)?.items || []).map(item => (
-            <div key={item.id} className="flex justify-between text-xs">
+            <div key={item.id} className="flex text-[10px]">
               <span>{item.quantity}x {item.name}</span>
               <span>{CURRENCY}{(item.price * item.quantity).toFixed(2)}</span>
             </div>
           ))}
         </div>
-        <hr className="border-t border-black border-dashed my-2" />
-        <div className="flex justify-between font-bold text-sm">
+        
+        <hr />
+        
+        <div className="flex font-bold text-xs">
           <span>TOTAL:</span>
           <span>{CURRENCY}{((printingTransaction || lastTransaction)?.total || 0).toFixed(2)}</span>
         </div>
-        <div className="text-center mt-8 text-xs">
-          <p className="font-bold">THANK YOU FOR YOUR VISIT!</p>
-          <p className="mt-1 italic">Please visit again</p>
+        
+        <div className="text-center mt-6">
+          <p className="text-[10px] font-bold">THANK YOU FOR YOUR VISIT!</p>
+          <p className="text-[10px] mt-1 italic">Please Visit Again</p>
           <div className="mt-4 pt-4 border-t border-black border-dotted">
-            <p className="text-[8px] opacity-50 uppercase tracking-widest">Powered by S7 Visuals</p>
+            <p className="text-[7px] uppercase tracking-widest opacity-60">Software by S7 Visuals</p>
           </div>
         </div>
       </div>
