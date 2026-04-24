@@ -539,10 +539,42 @@ export default function App() {
       {/* Invisible Print Template */}
       <style>{`
         @media print {
-          body * { visibility: hidden; }
-          #receipt-print, #receipt-print * { visibility: visible; }
-          #receipt-print { position: fixed; left: 0; top: 0; width: 80mm; padding: 10px; font-family: monospace; font-size: 12px; }
-          .no-print { display: none !important; }
+          @page {
+            margin: 0 !important;
+            padding: 0 !important;
+            size: 80mm auto;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 80mm !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          #root, nav, main, .no-print { 
+            display: none !important; 
+            height: 0 !important;
+            overflow: hidden !important;
+          }
+          #receipt-print { 
+            display: block !important;
+            visibility: visible !important;
+            position: relative !important;
+            width: 72mm !important; /* Slightly narrower to avoid side cutting on Cooper 80 */
+            margin: 0 auto !important;
+            padding: 4mm 2mm !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 10pt !important;
+            line-height: 1.1 !important;
+            float: none !important;
+          }
+          #receipt-print * {
+            visibility: visible !important;
+          }
+          hr {
+            border-top: 1px dashed black !important;
+            margin: 2mm 0 !important;
+          }
         }
       `}</style>
       
