@@ -1,6 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
-import { ShoppingCart, History, Trash2, Printer, Plus, Minus, CheckCircle, Package, Clock, DollarSign, ChevronRight, Search, Info, Mail, MessageSquare, Instagram, Music2, Eye, X, FileDown, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { ShoppingCart, History, Trash2, Printer, Plus, Minus, CheckCircle, Package, Clock, DollarSign, ChevronRight, Search, Info, Mail, MessageSquare, Instagram, Music2, Eye, X, FileDown, AlertTriangle, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { MenuItem, CartItem, Transaction } from './types';
 import { MENU_ITEMS, CATEGORIES, POS_NAME, CURRENCY } from './constants';
 import sabirLogo from './sabir_logo.png';
@@ -135,6 +137,52 @@ export default function App() {
     setTimeout(() => {
       window.print();
     }, 500);
+  };
+
+  const handleDownloadPDF = async (transaction: Transaction) => {
+    setPrintingTransaction(transaction);
+    
+    // Wait for state update and rendering
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const element = document.getElementById('receipt-print');
+    if (!element) return;
+
+    try {
+      // Ensure the element is visible for html2canvas
+      const originalStyle = element.style.cssText;
+      element.style.position = 'fixed';
+      element.style.left = '0';
+      element.style.top = '0';
+      element.style.visibility = 'visible';
+      element.style.zIndex = '9999';
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // Higher quality
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      // Restore styles
+      element.style.cssText = originalStyle;
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      // Receipt is typically 80mm wide. Thermal printers vary but 80mm is standard.
+      // 80mm = ~226px at 72dpi. 
+      const pdfWidth = 80; 
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`receipt-${transaction.id}.pdf`);
+      
+      setPrintingTransaction(null);
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      setPrintingTransaction(null);
+    }
   };
 
   return (
@@ -676,21 +724,28 @@ export default function App() {
               </div>
               <h2 className="text-2xl font-bold mb-2">Order Complete</h2>
               <p className="text-gray-500 mb-8">Transaction <span className="font-mono font-bold text-black">#{lastTransaction.id}</span> was successful.</p>
-              <div className="flex flex-col gap-3">
-                <button 
-                  onClick={() => handlePrint(lastTransaction)}
-                  className="w-full py-4 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all active:scale-95"
-                >
-                  <Printer size={20} />
-                  Print Receipt
-                </button>
-                <button 
-                  onClick={() => setLastTransaction(null)}
-                  className="w-full py-4 bg-gray-100 text-black rounded-2xl font-bold hover:bg-gray-200 transition-all"
-                >
-                  Next Order
-                </button>
-              </div>
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={() => handlePrint(lastTransaction)}
+                    className="w-full py-4 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all active:scale-95"
+                  >
+                    <Printer size={20} />
+                    Print Receipt
+                  </button>
+                  <button 
+                    onClick={() => handleDownloadPDF(lastTransaction)}
+                    className="w-full py-4 bg-sleek-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all active:scale-95 shadow-md shadow-amber-200"
+                  >
+                    <Download size={20} />
+                    Download PDF
+                  </button>
+                  <button 
+                    onClick={() => setLastTransaction(null)}
+                    className="w-full py-4 bg-gray-100 text-black rounded-2xl font-bold hover:bg-gray-200 transition-all"
+                  >
+                    Next Order
+                  </button>
+                </div>
             </motion.div>
           </motion.div>
         )}
@@ -760,16 +815,26 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="p-6 bg-white border-t border-gray-100">
+              <div className="p-6 bg-white border-t border-gray-100 flex flex-col gap-3">
                 <button 
                   onClick={() => {
                     handlePrint(previewTransaction);
                     setPreviewTransaction(null);
                   }}
-                  className="w-full py-4 bg-sleek-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all shadow-lg shadow-amber-200"
+                  className="w-full py-4 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-gray-800 transition-all shadow-lg"
                 >
                   <Printer size={20} />
                   Print Now
+                </button>
+                <button 
+                  onClick={() => {
+                    handleDownloadPDF(previewTransaction);
+                    setPreviewTransaction(null);
+                  }}
+                  className="w-full py-4 bg-sleek-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all shadow-lg shadow-amber-200"
+                >
+                  <Download size={20} />
+                  Download PDF Receipt
                 </button>
               </div>
             </motion.div>
