@@ -137,7 +137,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-sleek-bg text-sleek-text-main font-sans selection:bg-amber-100 flex flex-col md:flex-row overflow-hidden">
+    <div className="min-h-screen bg-sleek-bg text-sleek-text-main font-sans selection:bg-amber-100 flex flex-col md:flex-row overflow-hidden no-print">
       {/* Sidebar Navigation */}
       <nav className="w-full md:w-[220px] bg-sleek-sidebar text-white flex flex-row md:flex-col py-6 z-50">
         <div className="px-6 pb-8 hidden md:flex items-center gap-3">
@@ -554,46 +554,35 @@ export default function App() {
             margin: 0;
             padding: 0;
             width: 80mm;
-            background: white;
+            background: white !important;
           }
-          body * {
-            visibility: hidden;
-            display: none;
-          }
-          #receipt-print, #receipt-print * {
-            visibility: visible;
-            display: block;
+          .no-print {
+            display: none !important;
           }
           #receipt-print {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 72mm; /* Narrower to prevent cutting on Cooper 80 */
-            padding: 2mm;
-            margin: 0;
+            display: block !important;
+            visibility: visible !important;
+            width: 72mm;
+            padding: 4mm 2mm;
+            margin: 0 auto;
             font-family: 'Courier New', Courier, monospace;
             font-size: 11px;
             line-height: 1.2;
             color: black;
             box-sizing: border-box;
           }
-          #receipt-print .flex {
-            display: flex !important;
+          #receipt-print * {
+            visibility: visible !important;
           }
-          #receipt-print .justify-between {
-            justify-content: space-between !important;
-          }
-          #receipt-print .text-center {
-            text-align: center !important;
-          }
+          .flex { display: flex !important; }
+          .justify-between { justify-content: space-between !important; }
+          .text-center { text-align: center !important; }
+          .font-bold { font-weight: bold !important; }
           hr {
-            border: none;
-            border-top: 1px dashed black;
-            margin: 2mm 0;
+            border: none !important;
+            border-top: 1px dashed black !important;
+            margin: 2mm 0 !important;
             display: block !important;
-          }
-          .no-print {
-            display: none !important;
           }
         }
       `}</style>
