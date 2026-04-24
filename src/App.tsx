@@ -131,9 +131,10 @@ export default function App() {
 
   const handlePrint = (transaction: Transaction) => {
     setPrintingTransaction(transaction);
+    // Longer delay to ensure layout is ready for thermal printer
     setTimeout(() => {
       window.print();
-    }, 300);
+    }, 500);
   };
 
   return (
@@ -156,40 +157,27 @@ export default function App() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          /* Hide EVERYTHING inside root except the receipt */
-          #root {
-            width: 80mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: block !important;
-          }
-          #root > *:not(#receipt-print) {
+          /* Hide main app contents */
+          .no-print {
             display: none !important;
-            height: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: hidden !important;
             visibility: hidden !important;
+            height: 0 !important;
+            overflow: hidden !important;
           }
           #receipt-print {
             display: block !important;
             visibility: visible !important;
-            position: static !important;
-            width: 74mm !important;
+            width: 72mm !important;
             margin: 0 auto !important;
-            padding: 4mm 2mm !important;
+            padding: 2mm !important;
             font-family: 'Courier New', Courier, monospace !important;
             font-size: 10pt !important;
             line-height: 1.2 !important;
             color: black !important;
             background: white !important;
-            word-wrap: break-word !important;
           }
           #receipt-print * {
             visibility: visible !important;
-            display: block !important;
-            background: transparent !important;
-            color: black !important;
           }
           #receipt-print .flex {
             display: flex !important;
@@ -197,40 +185,25 @@ export default function App() {
             justify-content: space-between !important;
             width: 100% !important;
           }
-          #receipt-print .justify-between {
-             justify-content: space-between !important;
-          }
           #receipt-print .text-center {
             text-align: center !important;
           }
-          #receipt-print .uppercase {
-            text-transform: uppercase !important;
-          }
-          #receipt-print .font-bold {
-            font-weight: bold !important;
-          }
           #receipt-print hr {
+            display: block !important;
             border: none !important;
             border-top: 1px dashed black !important;
             margin: 2mm 0 !important;
             width: 100% !important;
-            height: 0 !important;
-          }
-          /* Helper to force inline for spans/etc */
-          #receipt-print .inline {
-            display: inline !important;
-          }
-          #receipt-print .space-y-1 > * + * {
-            margin-top: 0.25rem !important;
-          }
-          .no-print {
-            display: none !important;
           }
         }
       `}</style>
 
-      {/* Simple Receipt Template for Printing */}
-      <div id="receipt-print" className="hidden print:block text-black bg-white">
+      {/* Persistent but off-screen print template to avoid display:none issues */}
+      <div 
+        id="receipt-print" 
+        className="fixed -left-[1000px] top-0 print:static print:block text-black bg-white"
+        aria-hidden="true"
+      >
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full border border-black/10">
             <img src={sabirLogo} alt="Logo" className="w-full h-full object-cover" />
