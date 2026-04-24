@@ -133,17 +133,99 @@ export default function App() {
     setPrintingTransaction(transaction);
     setTimeout(() => {
       window.print();
-    }, 100);
+    }, 300);
   };
 
   return (
-    <div className="min-h-screen bg-sleek-bg text-sleek-text-main font-sans selection:bg-amber-100 flex flex-col md:flex-row overflow-hidden no-print">
-      {/* Sidebar Navigation */}
-      <nav className="w-full md:w-[220px] bg-sleek-sidebar text-white flex flex-row md:flex-col py-6 z-50">
-        <div className="px-6 pb-8 hidden md:flex items-center gap-3">
-          <div className="w-3 h-3 bg-sleek-primary rounded-sm shadow-[0_0_8px_rgba(204,154,75,0.5)]"></div>
-          <h1 className="text-xl font-bold tracking-tight">{POS_NAME}</h1>
+    <>
+      {/* Invisible Print Template */}
+      <style>{`
+        @media print {
+          @page {
+            margin: 0;
+            size: 80mm auto;
+          }
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 80mm !important;
+            background: white !important;
+          }
+          #root > *:not(#receipt-print) {
+            display: none !important;
+          }
+          #receipt-print {
+            display: block !important;
+            visibility: visible !important;
+            width: 72mm !important;
+            margin: 0 auto !important;
+            padding: 4mm 2mm !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 11pt !important;
+            line-height: 1.1 !important;
+            color: black !important;
+            background: white !important;
+          }
+          #receipt-print * {
+            visibility: visible !important;
+          }
+          .flex { display: flex !important; }
+          .justify-between { justify-content: space-between !important; }
+          .text-center { text-align: center !important; }
+          .font-bold { font-weight: bold !important; }
+          hr {
+            border: none !important;
+            border-top: 1px dashed black !important;
+            margin: 2mm 0 !important;
+            display: block !important;
+          }
+        }
+      `}</style>
+
+      {/* Simple Receipt Template for Printing (Moved to top sibling for isolation) */}
+      <div id="receipt-print" className="hidden print:block text-black bg-white">
+        <div className="text-center mb-4">
+          <div className="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full border border-black/10">
+            <img src={sabirLogo} alt="Logo" className="w-full h-full object-cover" />
+          </div>
+          <p className="text-sm font-bold uppercase tracking-wider mb-1">Sabir Biryani</p>
+          <p className="text-xs">Location: Gulshan-e-Maymar</p>
+          <p className="text-xs font-bold mt-1">WhatsApp: +92 345 0880202</p>
         </div>
+        <hr className="border-t border-black border-dashed my-2" />
+        <div className="flex justify-between text-xs mb-4">
+           <span>Order: #{(printingTransaction || lastTransaction)?.id || 'TEST'}</span>
+           <span>{new Date((printingTransaction || lastTransaction)?.timestamp || Date.now()).toLocaleDateString()}</span>
+        </div>
+        <div className="space-y-1 mb-4">
+          {((printingTransaction || lastTransaction)?.items || []).map(item => (
+            <div key={item.id} className="flex justify-between text-xs">
+              <span>{item.quantity}x {item.name}</span>
+              <span>{CURRENCY}{(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+        <hr className="border-t border-black border-dashed my-2" />
+        <div className="flex justify-between font-bold text-sm">
+          <span>TOTAL:</span>
+          <span>{CURRENCY}{((printingTransaction || lastTransaction)?.total || 0).toFixed(2)}</span>
+        </div>
+        <div className="text-center mt-8 text-xs">
+          <p className="font-bold">THANK YOU FOR YOUR VISIT!</p>
+          <p className="mt-1 italic">Please visit again</p>
+          <div className="mt-4 pt-4 border-t border-black border-dotted">
+            <p className="text-[8px] opacity-50 uppercase tracking-widest">Powered by S7 Visuals</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="min-h-screen bg-sleek-bg text-sleek-text-main font-sans selection:bg-amber-100 flex flex-col md:flex-row overflow-hidden no-print">
+        {/* Sidebar Navigation */}
+        <nav className="w-full md:w-[220px] bg-sleek-sidebar text-white flex flex-row md:flex-col py-6 z-50">
+          <div className="px-6 pb-8 hidden md:flex items-center gap-3">
+            <div className="w-3 h-3 bg-sleek-primary rounded-sm shadow-[0_0_8px_rgba(204,154,75,0.5)]"></div>
+            <h1 className="text-xl font-bold tracking-tight">{POS_NAME}</h1>
+          </div>
         
         <div className="flex flex-row md:flex-col flex-grow">
           <button 
@@ -191,7 +273,7 @@ export default function App() {
       </nav>
 
       {/* Main Content Area */}
-      <main className="flex-grow flex flex-col h-screen overflow-hidden">
+      <main className="flex-grow flex flex-col h-screen overflow-hidden no-print">
         {/* Header */}
         <header className="h-16 bg-white border-b border-sleek-border flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-3">
@@ -543,87 +625,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Invisible Print Template */}
-      <style>{`
-        @media print {
-          @page {
-            margin: 0;
-            size: 80mm auto;
-          }
-          html, body {
-            margin: 0;
-            padding: 0;
-            width: 80mm;
-            background: white !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          #receipt-print {
-            display: block !important;
-            visibility: visible !important;
-            width: 72mm;
-            padding: 4mm 2mm;
-            margin: 0 auto;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            line-height: 1.2;
-            color: black;
-            box-sizing: border-box;
-          }
-          #receipt-print * {
-            visibility: visible !important;
-          }
-          .flex { display: flex !important; }
-          .justify-between { justify-content: space-between !important; }
-          .text-center { text-align: center !important; }
-          .font-bold { font-weight: bold !important; }
-          hr {
-            border: none !important;
-            border-top: 1px dashed black !important;
-            margin: 2mm 0 !important;
-            display: block !important;
-          }
-        }
-      `}</style>
-      
-      {/* Simple Receipt Template for Printing */}
-      <div id="receipt-print" className="hidden print:block text-black bg-white">
-        <div className="text-center mb-4">
-          <div className="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full border border-black/10">
-            <img src={sabirLogo} alt="Logo" className="w-full h-full object-cover" />
-          </div>
-          <p className="text-sm font-bold uppercase tracking-wider mb-1">Sabir Biryani</p>
-          <p className="text-xs">Location: Gulshan-e-Maymar</p>
-          <p className="text-xs font-bold mt-1">WhatsApp: +92 345 0880202</p>
-        </div>
-        <hr className="border-t border-black border-dashed my-2" />
-        <div className="flex justify-between text-xs mb-4">
-           <span>Order: #{(printingTransaction || lastTransaction)?.id || 'TEST'}</span>
-           <span>{new Date((printingTransaction || lastTransaction)?.timestamp || Date.now()).toLocaleDateString()}</span>
-        </div>
-        <div className="space-y-1 mb-4">
-          {((printingTransaction || lastTransaction)?.items || []).map(item => (
-            <div key={item.id} className="flex justify-between text-xs">
-              <span>{item.quantity}x {item.name}</span>
-              <span>{CURRENCY}{(item.price * item.quantity).toFixed(2)}</span>
-            </div>
-          ))}
-        </div>
-        <hr className="border-t border-black border-dashed my-2" />
-        <div className="flex justify-between font-bold text-sm">
-          <span>TOTAL:</span>
-          <span>{CURRENCY}{((printingTransaction || lastTransaction)?.total || 0).toFixed(2)}</span>
-        </div>
-        <div className="text-center mt-8 text-xs">
-          <p className="font-bold">THANK YOU FOR YOUR VISIT!</p>
-          <p className="mt-1 italic">Please visit again</p>
-          <div className="mt-4 pt-4 border-t border-black border-dotted">
-            <p className="text-[8px] opacity-50 uppercase tracking-widest">Powered by S7 Visuals</p>
-          </div>
-        </div>
-      </div>
-
       {/* Success Modal */}
       <AnimatePresence>
         {lastTransaction && view === 'pos' && !isProcessing && (
@@ -631,7 +632,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm no-print"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
@@ -671,7 +672,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md no-print"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
@@ -752,7 +753,7 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md"
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md no-print"
           >
             <motion.div 
               initial={{ scale: 0.9, y: 20 }}
@@ -786,5 +787,6 @@ export default function App() {
         )}
       </AnimatePresence>
     </div>
-  );
+  </>
+);
 }
