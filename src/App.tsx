@@ -133,10 +133,12 @@ export default function App() {
 
   const handlePrint = (transaction: Transaction) => {
     setPrintingTransaction(transaction);
-    // Longer delay to ensure layout is ready for thermal printer
+    // Longer delay for hardware buffer to stabilize and ensure fonts are loaded
     setTimeout(() => {
       window.print();
-    }, 500);
+      // Keep state for a short moment after print dialog opens to satisfy some browsers
+      setTimeout(() => setPrintingTransaction(null), 1500);
+    }, 1000);
   };
 
   const handleDownloadPDF = async (transaction: Transaction) => {
@@ -149,28 +151,20 @@ export default function App() {
     if (!element) return;
 
     try {
-      // Ensure the element is visible for html2canvas
-      const originalStyle = element.style.cssText;
-      element.style.position = 'fixed';
+      // Temporarily move to visible area for capture
       element.style.left = '0';
-      element.style.top = '0';
       element.style.visibility = 'visible';
-      element.style.zIndex = '9999';
+      element.style.zIndex = '10000';
 
       const canvas = await html2canvas(element, {
-        scale: 2, // Higher quality
+        scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: '#ffffff'
       });
       
-      // Restore styles
-      element.style.cssText = originalStyle;
-
+      // Final PDF generation
       const imgData = canvas.toDataURL('image/png');
-      
-      // Receipt is typically 80mm wide. Thermal printers vary but 80mm is standard.
-      // 80mm = ~226px at 72dpi. 
       const pdfWidth = 80; 
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
@@ -178,9 +172,13 @@ export default function App() {
       pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       pdf.save(`receipt-${transaction.id}.pdf`);
       
-      setPrintingTransaction(null);
     } catch (error) {
       console.error('Failed to generate PDF:', error);
+    } finally {
+      // ALWAYS reset styles to original state (off-screen)
+      element.style.left = '';
+      element.style.visibility = '';
+      element.style.zIndex = '';
       setPrintingTransaction(null);
     }
   };
@@ -192,7 +190,7 @@ export default function App() {
         @media print {
           @page {
             margin: 0 !important;
-            size: 80mm auto;
+            size: 80mm auto !important;
           }
           html, body {
             margin: 0 !important;
@@ -205,27 +203,34 @@ export default function App() {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
-          /* Hide main app contents */
-          .no-print {
+          /* Hide main app contents with absolute certainty */
+          body > *:not(#receipt-print) {
             display: none !important;
             visibility: hidden !important;
-            height: 0 !important;
-            overflow: hidden !important;
+          }
+          #root {
+            display: none !important;
           }
           #receipt-print {
             display: block !important;
             visibility: visible !important;
-            width: 72mm !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 76mm !important;
             margin: 0 auto !important;
-            padding: 2mm !important;
+            padding: 2mm 2mm 20mm 2mm !important; /* Bottom padding for hardware cutter */
             font-family: 'Courier New', Courier, monospace !important;
             font-size: 10pt !important;
             line-height: 1.2 !important;
             color: black !important;
             background: white !important;
+            page-break-inside: avoid !important;
           }
           #receipt-print * {
             visibility: visible !important;
+            color: black !important;
+            background: transparent !important;
           }
           #receipt-print .flex {
             display: flex !important;
@@ -240,8 +245,15 @@ export default function App() {
             display: block !important;
             border: none !important;
             border-top: 1px dashed black !important;
-            margin: 2mm 0 !important;
+            margin: 3mm 0 !important;
             width: 100% !important;
+            height: 1px !important;
+          }
+          #receipt-print .item-row {
+            display: flex !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            margin-bottom: 1.5mm !important;
           }
         }
       `}</style>
@@ -249,7 +261,7 @@ export default function App() {
       {/* Persistent but off-screen print template to avoid display:none issues */}
       <div 
         id="receipt-print" 
-        className="fixed -left-[1000px] top-0 print:static print:block text-black bg-white"
+        className="fixed -left-[1000px] top-0 pointer-events-none print:static print:block text-black bg-white"
         aria-hidden="true"
       >
         <div className="text-center">
