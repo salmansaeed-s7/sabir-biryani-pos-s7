@@ -1,8 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { ShoppingCart, History, Trash2, Printer, Plus, Minus, CheckCircle, Package, Clock, DollarSign, ChevronRight, Search, Info, Mail, MessageSquare, Instagram, Music2, Eye, X, FileDown, AlertTriangle, Download } from 'lucide-react';
+import { ShoppingCart, History, Trash2, Printer, Plus, Minus, CheckCircle, Package, Clock, DollarSign, ChevronRight, Search, Info, Mail, MessageSquare, Instagram, Music2, Eye, X, FileDown, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { MenuItem, CartItem, Transaction } from './types';
 import { MENU_ITEMS, CATEGORIES, POS_NAME, CURRENCY } from './constants';
 import sabirLogo from './sabir_logo.png';
@@ -71,13 +69,6 @@ export default function App() {
       </div>
     );
   };
-
-  // Handle print state cleanup
-  useEffect(() => {
-    const handleAfterPrint = () => setPrintingTransaction(null);
-    window.addEventListener('afterprint', handleAfterPrint);
-    return () => window.removeEventListener('afterprint', handleAfterPrint);
-  }, []);
 
   // Load history from localStorage
   useEffect(() => {
@@ -186,64 +177,12 @@ export default function App() {
 
   const handlePrint = (transaction: Transaction) => {
     setPrintingTransaction(transaction);
-    // Longer delay for hardware buffer to stabilize and ensure fonts are loaded
+    // Give browser time to render the print container
     setTimeout(() => {
       window.print();
-      // Keep state for a short moment after print dialog opens to satisfy some browsers
-      setTimeout(() => setPrintingTransaction(null), 1500);
-    }, 1000);
-  };
-
-  const handleDownloadPDF = async (transaction: Transaction) => {
-    setPrintingTransaction(transaction);
-    
-    // Wait for state to propagate and a frame to ensure the off-screen element is updated
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const element = document.getElementById('receipt-print');
-    if (!element) {
-      setPrintingTransaction(null);
-      return;
-    }
-
-    try {
-      // Temporarily position for capture - move far away but keep it block
-      const originalStyle = element.style.cssText;
-      element.style.position = 'fixed';
-      element.style.left = '0';
-      element.style.top = '0';
-      element.style.visibility = 'visible';
-      element.style.zIndex = '99999';
-      element.style.width = '80mm';
-      element.style.background = 'white';
-
-      // Wait exactly one tick for browsers to calculate layout
-      await new Promise(resolve => requestAnimationFrame(resolve));
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: Math.ceil(80 * 3.78), // Convert 80mm to px at 96dpi (rough estimate for capture area)
-      });
-      
-      // Cleanup styles immediately after capture
-      element.style.cssText = originalStyle;
-
-      const imgData = canvas.toDataURL('image/png', 1.0);
-      const pdfWidth = 80; 
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-      
-      const pdf = new jsPDF('p', 'mm', [pdfWidth, pdfHeight]);
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`receipt-${transaction.id}.pdf`);
-      
-    } catch (error) {
-      console.error('Failed to generate PDF:', error);
-    } finally {
-      setPrintingTransaction(null);
-    }
+      // Keep state for a while so print engine can finish
+      setTimeout(() => setPrintingTransaction(null), 2000);
+    }, 800);
   };
 
   return (
@@ -252,78 +191,56 @@ export default function App() {
       <style>{`
         @media print {
           @page {
-            margin: 0 !important;
-            size: 80mm auto !important;
+            margin: 0;
+            size: 80mm auto;
           }
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 80mm !important;
-            height: auto !important;
-            min-height: 0 !important;
-            overflow: visible !important;
             background: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
-          /* Hide main app contents with absolute certainty */
-          .no-print {
+          /* Absolute hide for all app content */
+          #root > *:not(.print-only-container), .no-print, .fixed {
             display: none !important;
             visibility: hidden !important;
           }
-          #root {
+          #root > .print-only-container {
             display: block !important;
+            visibility: visible !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
             width: 80mm !important;
+            min-height: 100vh !important;
+            background: white !important;
           }
           #receipt-print {
             display: block !important;
-            visibility: visible !important;
-            position: relative !important;
-            width: 76mm !important;
+            width: 72mm !important;
             margin: 0 auto !important;
-            padding: 2mm 2mm 20mm 2mm !important; /* Bottom padding for hardware cutter */
-            font-family: 'Courier New', Courier, monospace !important;
-            font-size: 10pt !important;
-            line-height: 1.2 !important;
-            color: black !important;
+            padding: 5mm 0 20mm 0 !important;
             background: white !important;
-            page-break-inside: avoid !important;
-            background-color: white !important;
           }
           #receipt-print * {
             visibility: visible !important;
             color: black !important;
             background: transparent !important;
           }
-          #receipt-print .flex {
-            display: flex !important;
-            flex-direction: row !important;
-            justify-content: space-between !important;
-            width: 100% !important;
-          }
-          #receipt-print .text-center {
-            text-align: center !important;
-          }
-          #receipt-print hr {
+          .text-center { text-align: center !important; }
+          .flex { display: flex !important; justify-content: space-between !important; }
+          hr { 
+            border: none !important; 
+            border-top: 1px dashed black !important; 
+            margin: 3mm 0 !important; 
             display: block !important;
-            border: none !important;
-            border-top: 1px dashed black !important;
-            margin: 3mm 0 !important;
-            width: 100% !important;
             height: 1px !important;
-          }
-          #receipt-print .item-row {
-            display: flex !important;
-            justify-content: space-between !important;
-            width: 100% !important;
-            margin-bottom: 1.5mm !important;
           }
         }
       `}</style>
 
-      {/* Persistent but off-screen print template */}
+      {/* Print only container - hidden on screen, visible on print */}
       <div 
-        className="fixed -left-[2000px] top-0 pointer-events-none print:hidden"
+        className="print-only-container hidden print:block"
         aria-hidden="true"
       >
         <Receipt transaction={printingTransaction || lastTransaction} id="receipt-print" />
@@ -769,13 +686,6 @@ export default function App() {
                     Print Receipt
                   </button>
                   <button 
-                    onClick={() => handleDownloadPDF(lastTransaction)}
-                    className="w-full py-4 bg-sleek-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all active:scale-95 shadow-md shadow-amber-200"
-                  >
-                    <Download size={20} />
-                    Download PDF
-                  </button>
-                  <button 
                     onClick={() => setLastTransaction(null)}
                     className="w-full py-4 bg-gray-100 text-black rounded-2xl font-bold hover:bg-gray-200 transition-all"
                   >
@@ -829,17 +739,7 @@ export default function App() {
                   <Printer size={20} />
                   Print Now
                 </button>
-                <button 
-                  onClick={() => {
-                    handleDownloadPDF(previewTransaction);
-                    setPreviewTransaction(null);
-                  }}
-                  className="w-full py-4 bg-sleek-primary text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all shadow-lg shadow-amber-200"
-                >
-                  <Download size={20} />
-                  Download PDF Receipt
-                </button>
-              </div>
+</div>
             </motion.div>
           </motion.div>
         )}
