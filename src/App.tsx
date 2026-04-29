@@ -19,6 +19,59 @@ export default function App() {
   const [printingTransaction, setPrintingTransaction] = useState<Transaction | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  // Consolidated Receipt Component for all views
+  const Receipt = ({ transaction, id }: { transaction: Transaction | null, id?: string }) => {
+    if (!transaction) return null;
+    return (
+      <div id={id} className="receipt-content font-mono text-black bg-white" style={{ width: '72mm', margin: '0 auto', wordBreak: 'break-word' }}>
+        <div className="text-center mb-4">
+          <div className="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full border border-black/10">
+            <img src={sabirLogo} alt="Logo" className="w-full h-full object-cover" />
+          </div>
+          <p className="text-sm font-bold uppercase mb-0.5">Sabir Biryani</p>
+          <p className="text-[10px] leading-tight">GULSHAN-E-MAYMAR, KARACHI</p>
+          <p className="text-[10px] font-bold mt-1">WHATSAPP: 0345-0880202</p>
+        </div>
+        
+        <hr className="border-t border-black border-dashed my-2" />
+        
+        <div className="flex justify-between text-[10px]">
+           <span>Order: #{transaction.id}</span>
+           <span>{new Date(transaction.timestamp).toLocaleDateString()}</span>
+        </div>
+        <div className="flex justify-between text-[10px] mb-2">
+           <span>Time: {new Date(transaction.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+        
+        <hr className="border-t border-black border-dashed my-2" />
+        
+        <div className="space-y-1">
+          {transaction.items.map(item => (
+            <div key={item.id} className="flex justify-between text-[10px] gap-2">
+              <span className="flex-grow">{item.quantity}x {item.name}</span>
+              <span className="shrink-0">{CURRENCY}{(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+        </div>
+        
+        <hr className="border-t border-black border-dashed my-2" />
+        
+        <div className="flex justify-between font-bold text-xs">
+          <span>TOTAL:</span>
+          <span>{CURRENCY}{transaction.total.toFixed(2)}</span>
+        </div>
+        
+        <div className="text-center mt-6">
+          <p className="text-[10px] font-bold uppercase">Thank you for your visit!</p>
+          <p className="text-[10px] mt-0.5 italic">Please Visit Again</p>
+          <div className="mt-4 pt-4 border-t border-black border-dotted">
+            <p className="text-[7px] uppercase tracking-widest opacity-60">Software by S7 Visuals</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Handle print state cleanup
   useEffect(() => {
     const handleAfterPrint = () => setPrintingTransaction(null);
@@ -144,27 +197,41 @@ export default function App() {
   const handleDownloadPDF = async (transaction: Transaction) => {
     setPrintingTransaction(transaction);
     
-    // Wait for state update and rendering
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for state to propagate and a frame to ensure the off-screen element is updated
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     const element = document.getElementById('receipt-print');
-    if (!element) return;
+    if (!element) {
+      setPrintingTransaction(null);
+      return;
+    }
 
     try {
-      // Temporarily move to visible area for capture
+      // Temporarily position for capture - move far away but keep it block
+      const originalStyle = element.style.cssText;
+      element.style.position = 'fixed';
       element.style.left = '0';
+      element.style.top = '0';
       element.style.visibility = 'visible';
-      element.style.zIndex = '10000';
+      element.style.zIndex = '99999';
+      element.style.width = '80mm';
+      element.style.background = 'white';
+
+      // Wait exactly one tick for browsers to calculate layout
+      await new Promise(resolve => requestAnimationFrame(resolve));
 
       const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: '#ffffff'
+        backgroundColor: '#ffffff',
+        width: Math.ceil(80 * 3.78), // Convert 80mm to px at 96dpi (rough estimate for capture area)
       });
       
-      // Final PDF generation
-      const imgData = canvas.toDataURL('image/png');
+      // Cleanup styles immediately after capture
+      element.style.cssText = originalStyle;
+
+      const imgData = canvas.toDataURL('image/png', 1.0);
       const pdfWidth = 80; 
       const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
       
@@ -175,10 +242,6 @@ export default function App() {
     } catch (error) {
       console.error('Failed to generate PDF:', error);
     } finally {
-      // ALWAYS reset styles to original state (off-screen)
-      element.style.left = '';
-      element.style.visibility = '';
-      element.style.zIndex = '';
       setPrintingTransaction(null);
     }
   };
@@ -204,19 +267,18 @@ export default function App() {
             print-color-adjust: exact !important;
           }
           /* Hide main app contents with absolute certainty */
-          body > *:not(#receipt-print) {
+          .no-print {
             display: none !important;
             visibility: hidden !important;
           }
           #root {
-            display: none !important;
+            display: block !important;
+            width: 80mm !important;
           }
           #receipt-print {
             display: block !important;
             visibility: visible !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: relative !important;
             width: 76mm !important;
             margin: 0 auto !important;
             padding: 2mm 2mm 20mm 2mm !important; /* Bottom padding for hardware cutter */
@@ -226,6 +288,7 @@ export default function App() {
             color: black !important;
             background: white !important;
             page-break-inside: avoid !important;
+            background-color: white !important;
           }
           #receipt-print * {
             visibility: visible !important;
@@ -258,56 +321,12 @@ export default function App() {
         }
       `}</style>
 
-      {/* Persistent but off-screen print template to avoid display:none issues */}
+      {/* Persistent but off-screen print template */}
       <div 
-        id="receipt-print" 
-        className="fixed -left-[1000px] top-0 pointer-events-none print:static print:block text-black bg-white"
+        className="fixed -left-[2000px] top-0 pointer-events-none print:hidden"
         aria-hidden="true"
       >
-        <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full border border-black/10">
-            <img src={sabirLogo} alt="Logo" className="w-full h-full object-cover" />
-          </div>
-          <p className="text-sm font-bold uppercase mb-1">Sabir Biryani</p>
-          <p className="text-[10px]">GULSHAN-E-MAYMAR, KARACHI</p>
-          <p className="text-[10px] font-bold">WHATSAPP: 0345-0880202</p>
-        </div>
-        
-        <hr />
-        
-        <div className="flex text-[10px]">
-           <span>Order: #{(printingTransaction || lastTransaction)?.id || 'TEST'}</span>
-           <span>{new Date((printingTransaction || lastTransaction)?.timestamp || Date.now()).toLocaleDateString()}</span>
-        </div>
-        <div className="flex text-[10px] mb-2">
-           <span>Time: {new Date((printingTransaction || lastTransaction)?.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-        </div>
-        
-        <hr />
-        
-        <div className="space-y-1">
-          {((printingTransaction || lastTransaction)?.items || []).map(item => (
-            <div key={item.id} className="flex text-[10px]">
-              <span>{item.quantity}x {item.name}</span>
-              <span>{CURRENCY}{(item.price * item.quantity).toFixed(2)}</span>
-            </div>
-          ))}
-        </div>
-        
-        <hr />
-        
-        <div className="flex font-bold text-xs">
-          <span>TOTAL:</span>
-          <span>{CURRENCY}{((printingTransaction || lastTransaction)?.total || 0).toFixed(2)}</span>
-        </div>
-        
-        <div className="text-center mt-6">
-          <p className="text-[10px] font-bold">THANK YOU FOR YOUR VISIT!</p>
-          <p className="text-[10px] mt-1 italic">Please Visit Again</p>
-          <div className="mt-4 pt-4 border-t border-black border-dotted">
-            <p className="text-[7px] uppercase tracking-widest opacity-60">Software by S7 Visuals</p>
-          </div>
-        </div>
+        <Receipt transaction={printingTransaction || lastTransaction} id="receipt-print" />
       </div>
 
       <div className="min-h-screen bg-sleek-bg text-sleek-text-main font-sans selection:bg-amber-100 flex flex-col md:flex-row overflow-hidden no-print">
@@ -735,7 +754,12 @@ export default function App() {
                 <CheckCircle size={40} />
               </div>
               <h2 className="text-2xl font-bold mb-2">Order Complete</h2>
-              <p className="text-gray-500 mb-8">Transaction <span className="font-mono font-bold text-black">#{lastTransaction.id}</span> was successful.</p>
+              <p className="text-gray-500 mb-6">Transaction <span className="font-mono font-bold text-black">#{lastTransaction.id}</span> was successful.</p>
+              
+              <div className="mb-8 max-h-[300px] overflow-y-auto p-4 bg-gray-50 border border-dashed border-gray-200 rounded-xl flex justify-center">
+                <Receipt transaction={lastTransaction} />
+              </div>
+
                 <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => handlePrint(lastTransaction)}
@@ -788,42 +812,9 @@ export default function App() {
                 </button>
               </div>
               
-              <div className="flex-grow overflow-y-auto p-10 bg-gray-50 flex justify-center">
-                <div className="bg-white p-8 w-[80mm] shadow-xl border border-gray-200">
-                  {/* Receipt Content Mirror */}
-                  <div className="text-center mb-4">
-                    <div className="w-16 h-16 mx-auto mb-2 overflow-hidden rounded-full border border-black/10">
-                      <img src={sabirLogo} alt="Logo" className="w-full h-full object-cover" />
-                    </div>
-                    <p className="text-sm font-bold uppercase tracking-wider mb-1">Sabir Biryani</p>
-                    <p className="text-xs">Location: Gulshan-e-Maymar</p>
-                    <p className="text-xs font-bold mt-1">WhatsApp: +92 345 0880202</p>
-                  </div>
-                  <hr className="border-t border-black border-dashed my-2" />
-                  <div className="flex justify-between text-[10px] mb-4">
-                     <span>#{previewTransaction.id}</span>
-                     <span>{new Date(previewTransaction.timestamp).toLocaleDateString()}</span>
-                  </div>
-                  <div className="space-y-1 mb-4">
-                    {previewTransaction.items.map(item => (
-                      <div key={item.id} className="flex justify-between text-[10px]">
-                        <span>{item.quantity}x {item.name}</span>
-                        <span>{CURRENCY}{(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <hr className="border-t border-black border-dashed my-2" />
-                  <div className="flex justify-between font-bold text-xs">
-                    <span>TOTAL:</span>
-                    <span>{CURRENCY}{previewTransaction.total.toFixed(2)}</span>
-                  </div>
-                  <div className="text-center mt-8 text-[10px]">
-                    <p className="font-bold">THANK YOU FOR YOUR VISIT!</p>
-                    <p className="mt-1 italic">Please visit again</p>
-                    <div className="mt-4 pt-4 border-t border-black border-dotted">
-                      <p className="text-[8px] opacity-50 uppercase tracking-widest">Powered by S7 Visuals</p>
-                    </div>
-                  </div>
+              <div className="flex-grow overflow-y-auto p-4 sm:p-10 bg-gray-50 flex justify-center">
+                <div className="bg-white p-4 sm:p-8 w-max max-w-full shadow-xl border border-gray-200 h-fit">
+                  <Receipt transaction={previewTransaction} />
                 </div>
               </div>
 
